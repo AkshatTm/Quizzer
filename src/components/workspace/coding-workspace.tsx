@@ -8,6 +8,7 @@ import { BentoGrid, BentoTile } from "@/components/workspace/bento-grid";
 import { CodeEditor } from "@/components/workspace/code-editor";
 import { ProblemTile } from "@/components/workspace/problem-tile";
 import { TestRunnerTile, TestResult } from "@/components/workspace/test-runner-tile";
+import { runTestCases } from "@/app/actions/execute";
 
 interface CodingChallenge {
     problemDescription: string;
@@ -34,28 +35,26 @@ export function CodingWorkspace({
     const [status, setStatus] = useState<"idle" | "running" | "done">("idle");
     const [testResults, setTestResults] = useState<TestResult[]>([]);
 
-    // Simulated code execution (will connect to Piston in Phase 4)
+    // Real code execution via Piston API
     async function handleRun(codeToRun: string) {
         setStatus("running");
         setTestResults([]);
 
-        // Simulate delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        try {
+            const results = await runTestCases(codeToRun, language, challenge.testCases);
+            setTestResults(results);
+        } catch (error) {
+            console.error("Execution error:", error);
+            // Show error state
+            setTestResults([{
+                input: "",
+                expectedOutput: "",
+                actualOutput: "Execution service unavailable. Make sure Piston is running.",
+                passed: false,
+                isHidden: false,
+            }]);
+        }
 
-        // Mock test results - In Phase 4, this will call Piston API
-        const results: TestResult[] = challenge.testCases.map((tc, idx) => {
-            // Simulate some passing, some failing
-            const passed = idx % 3 !== 2; // 2/3 pass for demo
-            return {
-                input: tc.input,
-                expectedOutput: tc.expectedOutput,
-                actualOutput: passed ? tc.expectedOutput : "Wrong answer",
-                passed,
-                isHidden: tc.isHidden,
-            };
-        });
-
-        setTestResults(results);
         setStatus("done");
     }
 
