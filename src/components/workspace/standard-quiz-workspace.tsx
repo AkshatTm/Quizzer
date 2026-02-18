@@ -28,8 +28,8 @@ export function StandardQuizWorkspace({
     title,
     description,
     questions,
-    quizId,
-    assignmentId,
+    quizId: _quizId,
+    assignmentId: _assignmentId,
     onSubmit,
     onDispute,
 }: StandardQuizWorkspaceProps) {

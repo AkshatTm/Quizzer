@@ -46,7 +46,7 @@ export async function executeCode(
     }
 
     try {
-        const pistonUrl = `${PISTON_URL}/api/v2/execute`;
+        const pistonUrl = `${getPistonUrl()}/api/v2/execute`;
         console.log("[execute] Calling Piston directly at:", pistonUrl);
 
         const response = await fetch(pistonUrl, {
@@ -99,7 +99,7 @@ export async function executeCode(
         return {
             success: false,
             output: "",
-            error: `Cannot reach code execution service at ${PISTON_URL}`,
+            error: `Cannot reach code execution service at ${getPistonUrl()}`,
             exitCode: null,
         };
     }
@@ -133,7 +133,7 @@ export async function runTestCases(
 
 export async function checkPistonAvailable(): Promise<boolean> {
     try {
-        const response = await fetch(`${PISTON_URL}/api/v2/runtimes`);
+        const response = await fetch(`${getPistonUrl()}/api/v2/runtimes`);
         return response.ok;
     } catch {
         return false;
