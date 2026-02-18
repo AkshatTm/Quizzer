@@ -150,4 +150,4 @@ MIT
 
 ---
 
-Built with ❤️ by [Akshat](https://github.com/AkshatTm)
+Built with ❤️ by [Akshat](https://github.com/AkshatTm), [Urooz](https://github.com/Uroozing)
