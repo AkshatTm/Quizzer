@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PISTON_URL = process.env.PISTON_URL || "http://localhost:2000";
+const PISTON_URL = process.env.PISTON_URL || "http://127.0.0.1:2000";
 
 // Language mappings for Piston
 const LANGUAGE_MAP: { [key: string]: { language: string; version: string } } = {
@@ -60,27 +60,39 @@ export async function POST(request: NextRequest) {
         }
 
         // Call Piston API
-        const pistonResponse = await fetch(`${PISTON_URL}/api/v2/execute`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                language: langConfig.language,
-                version: langConfig.version,
-                files: [{ content: code }],
-                stdin,
-                args: [],
-                compile_timeout: 10000, // 10 seconds
-                run_timeout: 5000, // 5 seconds
-                compile_memory_limit: 256000000, // 256MB
-                run_memory_limit: 256000000, // 256MB
-            }),
-        });
+        const pistonUrl = `${PISTON_URL}/api/v2/execute`;
+        console.log("[code/execute] Calling Piston at:", pistonUrl, "PISTON_URL env:", process.env.PISTON_URL);
+
+        let pistonResponse: Response;
+        try {
+            pistonResponse = await fetch(pistonUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    language: langConfig.language,
+                    version: langConfig.version,
+                    files: [{ content: code }],
+                    stdin,
+                    args: [],
+                    compile_timeout: 10000, // 10 seconds
+                    run_timeout: 5000, // 5 seconds
+                    compile_memory_limit: 256000000, // 256MB
+                    run_memory_limit: 256000000, // 256MB
+                }),
+            });
+        } catch (fetchError) {
+            console.error("[code/execute] Fetch to Piston failed:", fetchError);
+            return NextResponse.json(
+                { error: `Cannot reach Piston at ${pistonUrl}: ${fetchError}` },
+                { status: 503 }
+            );
+        }
 
         if (!pistonResponse.ok) {
             const errorText = await pistonResponse.text();
-            console.error("Piston error:", errorText);
+            console.error("[code/execute] Piston returned error:", pistonResponse.status, errorText);
             return NextResponse.json(
-                { error: "Code execution service unavailable" },
+                { error: `Code execution service error (${pistonResponse.status}): ${errorText}` },
                 { status: 503 }
             );
         }

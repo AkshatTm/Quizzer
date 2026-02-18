@@ -26,27 +26,38 @@ export function AddStudentDialog({ classroomId }: AddStudentDialogProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [mode, setMode] = useState<"single" | "bulk">("single");
     const [name, setName] = useState("");
+    const [accessId, setAccessId] = useState("");
     const [bulkNames, setBulkNames] = useState("");
+    const [error, setError] = useState("");
 
     async function handleSubmit() {
         setIsLoading(true);
+        setError("");
         try {
             if (mode === "single") {
-                await addStudent(classroomId, name);
+                await addStudent(classroomId, name, accessId || undefined);
                 setName("");
+                setAccessId("");
             } else {
-                const names = bulkNames
+                const entries = bulkNames
                     .split("\n")
-                    .map(n => n.trim())
-                    .filter(n => n.length > 0);
-                if (names.length > 0) {
-                    await addMultipleStudents(classroomId, names);
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .map(line => {
+                        const parts = line.split(",").map(p => p.trim());
+                        return {
+                            name: parts[0],
+                            accessId: parts[1] || undefined,
+                        };
+                    });
+                if (entries.length > 0) {
+                    await addMultipleStudents(classroomId, entries);
                     setBulkNames("");
                 }
             }
             setOpen(false);
-        } catch (error) {
-            console.error("Failed to add student:", error);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to add student");
         } finally {
             setIsLoading(false);
         }
@@ -64,7 +75,7 @@ export function AddStudentDialog({ classroomId }: AddStudentDialogProps) {
                 <DialogHeader>
                     <DialogTitle className="font-serif">Add Students</DialogTitle>
                     <DialogDescription>
-                        Add students to this classroom. Each student will receive a unique Access ID.
+                        Add students to this classroom. You can set a custom Access ID or leave it blank to auto-generate.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -87,28 +98,47 @@ export function AddStudentDialog({ classroomId }: AddStudentDialogProps) {
                     </Button>
                 </div>
 
+                {error && (
+                    <p className="text-sm text-destructive bg-destructive/10 rounded p-2">{error}</p>
+                )}
+
                 <div className="space-y-4 py-2">
                     {mode === "single" ? (
-                        <div className="space-y-2">
-                            <Label htmlFor="studentName">Student Name</Label>
-                            <Input
-                                id="studentName"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="e.g., John Doe"
-                            />
-                        </div>
+                        <>
+                            <div className="space-y-2">
+                                <Label htmlFor="studentName">Student Name *</Label>
+                                <Input
+                                    id="studentName"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="e.g., John Doe"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="studentAccessId">Access ID (optional)</Label>
+                                <Input
+                                    id="studentAccessId"
+                                    value={accessId}
+                                    onChange={(e) => setAccessId(e.target.value)}
+                                    placeholder="Leave blank to auto-generate"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Students use this ID to log in. Must be unique.
+                                </p>
+                            </div>
+                        </>
                     ) : (
                         <div className="space-y-2">
-                            <Label htmlFor="bulkNames">Student Names (one per line)</Label>
+                            <Label htmlFor="bulkNames">Students (one per line)</Label>
                             <Textarea
                                 id="bulkNames"
                                 value={bulkNames}
                                 onChange={(e) => setBulkNames(e.target.value)}
-                                placeholder="John Doe&#10;Jane Smith&#10;Alex Johnson"
+                                placeholder={"John Doe, JOHN123\nJane Smith, JANE456\nAlex Johnson"}
                                 rows={6}
                             />
                             <p className="text-xs text-muted-foreground">
+                                Format: <code>Name, AccessID</code> (AccessID is optional).{" "}
                                 {bulkNames.split("\n").filter(n => n.trim()).length} students will be added
                             </p>
                         </div>

@@ -1,13 +1,15 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { getClassroom } from "@/app/actions/classroom";
+import { getQuizzes } from "@/app/actions/quiz";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, BookOpen } from "lucide-react";
+import { ArrowLeft, Users, BookOpen, Clock } from "lucide-react";
 import Link from "next/link";
 import { AddStudentDialog } from "@/components/classroom/add-student-dialog";
 import { StudentTable } from "@/components/classroom/student-table";
+import { AssignQuizDialog } from "@/components/classroom/assign-quiz-dialog";
 
 interface ClassroomPageProps {
     params: Promise<{ id: string }>;
@@ -19,8 +21,13 @@ export default async function ClassroomPage({ params }: ClassroomPageProps) {
 
     const { id } = await params;
     const classroom = await getClassroom(id);
+    const allQuizzes = await getQuizzes();
 
     if (!classroom) notFound();
+
+    // Filter out quizzes already assigned to this classroom
+    const assignedQuizIds = new Set(classroom.assignments.map((a: { quizId: string }) => a.quizId));
+    const availableQuizzes = allQuizzes.filter((q: { id: string }) => !assignedQuizIds.has(q.id));
 
     return (
         <main className="min-h-screen p-6 md:p-12">
@@ -40,6 +47,14 @@ export default async function ClassroomPage({ params }: ClassroomPageProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <AssignQuizDialog
+                        classroomId={id}
+                        availableQuizzes={availableQuizzes.map((q: { id: string; title: string; type: string }) => ({
+                            id: q.id,
+                            title: q.title,
+                            type: q.type,
+                        }))}
+                    />
                     <Link href={`/dashboard/classroom/${id}/quiz/create`}>
                         <Button className="btn-juicy gap-2">
                             <BookOpen className="w-4 h-4" />
@@ -92,6 +107,60 @@ export default async function ClassroomPage({ params }: ClassroomPageProps) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Assignments Section */}
+            {classroom.assignments.length > 0 && (
+                <Card className="mb-8">
+                    <CardHeader>
+                        <CardTitle className="font-serif">Assigned Quizzes</CardTitle>
+                        <CardDescription>
+                            Quizzes assigned to students in this classroom
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {classroom.assignments.map((assignment: {
+                                id: string;
+                                createdAt: Date;
+                                deadline: Date | null;
+                                isOpen: boolean;
+                                quiz: { id: string; title: string; type: string; description: string | null };
+                                submissions?: unknown[];
+                            }) => (
+                                <div
+                                    key={assignment.id}
+                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div>
+                                            <p className="font-medium">{assignment.quiz.title}</p>
+                                            {assignment.quiz.description && (
+                                                <p className="text-sm text-muted-foreground line-clamp-1">
+                                                    {assignment.quiz.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Badge variant="outline">
+                                            {assignment.quiz.type}
+                                        </Badge>
+                                        {assignment.deadline && (
+                                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Clock className="w-3.5 h-3.5" />
+                                                {new Date(assignment.deadline).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                        <Badge variant={assignment.isOpen ? "default" : "secondary"}>
+                                            {assignment.isOpen ? "Open" : "Closed"}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Students Section */}
             <Card>

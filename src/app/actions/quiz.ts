@@ -110,7 +110,7 @@ export interface GeneratedQuizContent {
 }
 
 export async function generateQuizWithAI(prompt: string): Promise<GeneratedQuizContent> {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const systemPrompt = `You are an educational content creator AI. Based on the user's prompt, generate quiz content in JSON format.
 
@@ -224,4 +224,118 @@ export async function assignQuizToClassroom(quizId: string, classroomId: string,
     revalidatePath("/dashboard");
     revalidatePath(`/dashboard/classroom/${classroomId}`);
     return assignment;
+}
+
+// ============================================
+// SUBMISSION ACTIONS
+// ============================================
+
+export async function submitQuiz(data: {
+    assignmentId?: string;
+    quizId: string;
+    answers: string; // JSON string of answers
+    score: number;
+    maxScore: number;
+}) {
+    const session = await auth();
+    if (!session?.user?.id) throw new Error("Unauthorized");
+
+    // Find student record
+    const student = await prisma.student.findFirst({
+        where: {
+            OR: [
+                { id: session.user.id },
+                { accessId: session.user.email?.replace("@student.local", "") },
+            ],
+        },
+    });
+
+    if (!student) throw new Error("Student not found");
+
+    // If no assignmentId, find or create one
+    let assignmentId = data.assignmentId;
+    if (!assignmentId) {
+        const assignment = await prisma.assignment.findFirst({
+            where: {
+                quizId: data.quizId,
+                classroomId: student.classroomId,
+            },
+        });
+        assignmentId = assignment?.id;
+    }
+
+    if (!assignmentId) throw new Error("Assignment not found");
+
+    const submission = await prisma.submission.create({
+        data: {
+            studentId: student.id,
+            assignmentId,
+            answers: data.answers,
+            score: data.score,
+            maxScore: data.maxScore,
+            gradedAt: new Date(),
+        },
+    });
+
+    revalidatePath("/dashboard");
+    return submission;
+}
+
+export async function getStudentSubmissions() {
+    const session = await auth();
+    if (!session?.user?.id) return [];
+
+    const student = await prisma.student.findFirst({
+        where: {
+            OR: [
+                { id: session.user.id },
+                { accessId: session.user.email?.replace("@student.local", "") },
+            ],
+        },
+    });
+
+    if (!student) return [];
+
+    return prisma.submission.findMany({
+        where: { studentId: student.id },
+        include: {
+            assignment: {
+                include: { quiz: true },
+            },
+        },
+        orderBy: { submittedAt: "desc" },
+    });
+}
+
+export async function getStudentAssignments() {
+    const session = await auth();
+    if (!session?.user?.id) return [];
+
+    const student = await prisma.student.findFirst({
+        where: {
+            OR: [
+                { id: session.user.id },
+                { accessId: session.user.email?.replace("@student.local", "") },
+            ],
+        },
+        include: { classroom: true },
+    });
+
+    if (!student) return [];
+
+    const assignments = await prisma.assignment.findMany({
+        where: {
+            classroomId: student.classroomId,
+            isOpen: true,
+        },
+        include: {
+            quiz: true,
+            submissions: {
+                where: { studentId: student.id },
+            },
+        },
+        orderBy: { createdAt: "desc" },
+    });
+
+    return assignments;
 }

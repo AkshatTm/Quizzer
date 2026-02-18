@@ -1,27 +1,10 @@
-version: '3.8'
-
 services:
   # Piston Code Execution Engine
   piston:
     image: ghcr.io/engineer-man/piston:latest
     ports:
       - "2000:2000"
+    privileged: true
     tmpfs:
-      - /tmp:exec
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /piston/jobs:exec,uid=1000,gid=1000
     restart: unless-stopped
-
-# Note: The main Next.js app runs on your host machine during development.
-# In production, add:
-#
-#   app:
-#     build: .
-#     ports:
-#       - "3000:3000"
-#     environment:
-#       - DATABASE_URL=${DATABASE_URL}
-#       - PISTON_URL=http://piston:2000
-#       - GEMINI_API_KEY=${GEMINI_API_KEY}
-#     depends_on:
-#       - piston

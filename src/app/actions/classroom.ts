@@ -79,7 +79,7 @@ export async function deleteClassroom(id: string) {
 // STUDENT ACTIONS
 // ============================================
 
-export async function addStudent(classroomId: string, name: string) {
+export async function addStudent(classroomId: string, name: string, customAccessId?: string) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -89,10 +89,19 @@ export async function addStudent(classroomId: string, name: string) {
     });
     if (!classroom) throw new Error("Classroom not found");
 
+    // Use custom access ID or generate one
+    let accessId = customAccessId?.trim() || generateAccessId();
+
+    // Validate uniqueness if custom
+    if (customAccessId?.trim()) {
+        const existing = await prisma.student.findUnique({ where: { accessId } });
+        if (existing) throw new Error(`Access ID "${accessId}" is already taken`);
+    }
+
     const student = await prisma.student.create({
         data: {
             name,
-            accessId: generateAccessId(),
+            accessId,
             classroomId,
         },
     });
@@ -102,7 +111,10 @@ export async function addStudent(classroomId: string, name: string) {
     return student;
 }
 
-export async function addMultipleStudents(classroomId: string, names: string[]) {
+export async function addMultipleStudents(
+    classroomId: string,
+    entries: { name: string; accessId?: string }[]
+) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -112,10 +124,30 @@ export async function addMultipleStudents(classroomId: string, names: string[]) 
     });
     if (!classroom) throw new Error("Classroom not found");
 
+    // Collect custom IDs to check for duplicates within the batch
+    const customIds = entries
+        .map(e => e.accessId?.trim())
+        .filter((id): id is string => !!id);
+    const uniqueCustomIds = new Set(customIds);
+    if (customIds.length !== uniqueCustomIds.size) {
+        throw new Error("Duplicate Access IDs found in the batch");
+    }
+
+    // Check existing access IDs in DB
+    if (customIds.length > 0) {
+        const existing = await prisma.student.findMany({
+            where: { accessId: { in: customIds } },
+            select: { accessId: true },
+        });
+        if (existing.length > 0) {
+            throw new Error(`Access ID(s) already taken: ${existing.map(e => e.accessId).join(", ")}`);
+        }
+    }
+
     const students = await prisma.student.createMany({
-        data: names.map(name => ({
-            name,
-            accessId: generateAccessId(),
+        data: entries.map(entry => ({
+            name: entry.name,
+            accessId: entry.accessId?.trim() || generateAccessId(),
             classroomId,
         })),
     });

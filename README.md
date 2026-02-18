@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CodeCanvas (OpenQuiz)
 
-## Getting Started
+> Where coding assessments feel like creative puzzles rather than exams.
 
-First, run the development server:
+An interactive, AI-powered educational platform with gamified learning, coding challenges, and spaced-repetition flashcards.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8)
+![Prisma](https://img.shields.io/badge/Prisma-5-2D3748)
+
+## ✨ Features
+
+### 🎓 For Teachers
+- **Magic Input** - Describe what you want to teach in plain English, Gemini AI generates quiz content
+- **Class Manager** - Create classrooms, add students with unique Access IDs
+- **Three Quiz Types**:
+  - 📝 Standard (MCQ, short answer)
+  - 💻 Coding (with auto-generated test cases)
+  - 🧠 Flashcards (with spaced repetition)
+- **Dispute System** - Students can flag questions for review
+
+### 👨‍🎓 For Students
+- **Bento Workspace** - Split-view coding environment with Monaco Editor
+- **Real-time Code Execution** - Run code securely via Piston sandbox
+- **Traffic Light Feedback** - Instant visual test results
+- **Spaced Repetition** - FSRS algorithm tracks learning progress
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Docker (for code execution)
+- Google OAuth credentials (for teacher login)
+- Gemini API key
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/AkshatTm/Quizzer.git
+cd quizzer
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Initialize the database
+npx prisma migrate dev
+
+# Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env` file with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+# Database
+DATABASE_URL="file:./dev.db"
 
-## Learn More
+# Auth.js
+AUTH_SECRET=your-secret-here
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
-To learn more about Next.js, take a look at the following resources:
+# Gemini AI
+GEMINI_API_KEY=your-gemini-api-key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Piston (Code Execution)
+PISTON_URL=http://localhost:2000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Running Piston (Code Execution)
 
-## Deploy on Vercel
+```bash
+docker-compose up -d piston
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🏗️ Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/           # Auth.js routes
+│   │   └── code/execute/   # Piston API proxy
+│   ├── actions/            # Server actions
+│   │   ├── classroom.ts    # Classroom CRUD
+│   │   ├── quiz.ts         # Quiz + AI generation
+│   │   ├── execute.ts      # Code execution
+│   │   └── srs.ts          # Spaced repetition
+│   ├── dashboard/          # Teacher dashboard
+│   ├── quiz/[quizId]/      # Quiz-taking pages
+│   └── login/              # Authentication
+├── components/
+│   ├── ui/                 # shadcn/ui components
+│   ├── classroom/          # Classroom management
+│   ├── quiz/               # Quiz preview
+│   └── workspace/          # Student workspace
+│       ├── bento-grid.tsx
+│       ├── code-editor.tsx
+│       ├── problem-tile.tsx
+│       ├── test-runner-tile.tsx
+│       ├── coding-workspace.tsx
+│       └── flashcard-workspace.tsx
+└── lib/
+    ├── auth.ts             # Auth.js config
+    └── db.ts               # Prisma client
+```
+
+## 🎨 Design System
+
+**Warm Minimalism** aesthetic:
+- Cream background (`#FFFBF5`)
+- Electric Violet accent (`#7C3AED`)
+- Pastel Bento tiles (Lavender, Mint, Butter)
+- Fraunces serif + Inter sans + Fira Code mono
+- Grain texture overlay
+- Highlighter marker effect
+
+## 📚 Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 16 + App Router |
+| Styling | Tailwind CSS 4 + shadcn/ui |
+| Database | SQLite + Prisma 5 |
+| Auth | Auth.js (NextAuth v5) |
+| AI | Google Gemini API |
+| Code Execution | Piston (Docker) |
+| Spaced Repetition | ts-fsrs |
+| Editor | Monaco Editor |
+
+## 🛣️ Roadmap
+
+- [ ] Standard quiz UI
+- [ ] Dispute resolution flow
+- [ ] Analytics dashboard
+- [ ] Vercel deployment guide
+- [ ] PostgreSQL migration
+
+## 📄 License
+
+MIT
+
+---
+
+Built with ❤️ by [Akshat](https://github.com/AkshatTm)

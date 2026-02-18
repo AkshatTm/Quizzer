@@ -20,12 +20,22 @@ import { createClassroom } from "@/app/actions/classroom";
 export function CreateClassroomDialog() {
     const [open, setOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
 
-    async function handleSubmit(formData: FormData) {
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!name.trim()) return;
+
         setIsLoading(true);
         try {
+            const formData = new FormData();
+            formData.set("name", name);
+            formData.set("description", description);
             await createClassroom(formData);
             setOpen(false);
+            setName("");
+            setDescription("");
         } catch (error) {
             console.error("Failed to create classroom:", error);
         } finally {
@@ -48,7 +58,7 @@ export function CreateClassroomDialog() {
                         Give your classroom a name and description. You can add students after creation.
                     </DialogDescription>
                 </DialogHeader>
-                <form action={handleSubmit}>
+                <form onSubmit={handleSubmit}>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">Classroom Name</Label>
@@ -56,6 +66,8 @@ export function CreateClassroomDialog() {
                                 id="name"
                                 name="name"
                                 placeholder="e.g., CS101 - Introduction to Programming"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 required
                             />
                         </div>
@@ -65,6 +77,8 @@ export function CreateClassroomDialog() {
                                 id="description"
                                 name="description"
                                 placeholder="A brief description of this classroom..."
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
                                 rows={3}
                             />
                         </div>
@@ -73,7 +87,7 @@ export function CreateClassroomDialog() {
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading} className="btn-juicy">
+                        <Button type="submit" disabled={isLoading || !name.trim()} className="btn-juicy">
                             {isLoading ? "Creating..." : "Create Classroom"}
                         </Button>
                     </DialogFooter>

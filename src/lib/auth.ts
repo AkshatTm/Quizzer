@@ -1,16 +1,44 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     adapter: PrismaAdapter(prisma),
     providers: [
-        // Teacher authentication via Google OAuth
-        Google({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        // Teacher authentication via Email/Password
+        Credentials({
+            id: "teacher-credentials",
+            name: "Email and Password",
+            credentials: {
+                email: { label: "Email", type: "email", placeholder: "teacher@example.com" },
+                password: { label: "Password", type: "password" },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) return null;
+
+                const user = await prisma.user.findUnique({
+                    where: { email: credentials.email as string },
+                });
+
+                if (!user || !user.password) return null;
+
+                const isValidPassword = await bcrypt.compare(
+                    credentials.password as string,
+                    user.password
+                );
+
+                if (!isValidPassword) return null;
+
+                return {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                };
+            },
         }),
         // Student authentication via Access ID
         Credentials({
@@ -29,7 +57,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
                 if (!student) return null;
 
-                // Return a user-like object for the session
                 return {
                     id: student.id,
                     name: student.name,
@@ -39,9 +66,37 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 };
             },
         }),
+        // Google OAuth for teachers
+        Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        }),
     ],
     session: {
         strategy: "jwt",
+    },
+    logger: {
+        // Suppress JWTSessionError console.error logs (caused by stale cookies
+        // when AUTH_SECRET changes). Auth.js already handles this gracefully by
+        // returning null for the session — the console.error is just noise.
+        error: (error) => {
+            // Check error.name (standard Error), error.type (AuthError subclass),
+            // and a case-insensitive message check as fallback
+            const name = error instanceof Error ? error.name : "";
+            const type = (error as { type?: string })?.type || "";
+            const message = error instanceof Error ? error.message : String(error);
+            if (
+                name === "JWTSessionError" ||
+                type === "JWTSessionError" ||
+                message.toLowerCase().includes("jwtsessionerror") ||
+                message.includes("no matching decryption secret")
+            ) {
+                // Silently ignore — stale cookie, session will be null
+                return;
+            }
+            // Log unexpected auth errors normally
+            console.error("[auth] error:", error);
+        },
     },
     callbacks: {
         async jwt({ token, user }) {

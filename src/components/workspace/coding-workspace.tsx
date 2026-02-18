@@ -21,19 +21,27 @@ interface CodingChallenge {
 interface CodingWorkspaceProps {
     title: string;
     challenge: CodingChallenge;
-    language?: string;
+    allowedLanguages?: string[];
     onSubmit?: (code: string, results: TestResult[]) => void;
 }
 
 export function CodingWorkspace({
     title,
     challenge,
-    language = "python",
+    allowedLanguages = ["python"],
     onSubmit,
 }: CodingWorkspaceProps) {
+    const [language, setLanguage] = useState(allowedLanguages[0] || "python");
     const [code, setCode] = useState(challenge.starterCode[language] || "");
     const [status, setStatus] = useState<"idle" | "running" | "done">("idle");
     const [testResults, setTestResults] = useState<TestResult[]>([]);
+
+    function handleLanguageChange(newLang: string) {
+        setLanguage(newLang);
+        setCode(challenge.starterCode[newLang] || "");
+        setTestResults([]);
+        setStatus("idle");
+    }
 
     // Real code execution via Piston API
     async function handleRun(codeToRun: string) {
@@ -108,6 +116,8 @@ export function CodingWorkspace({
                         <CodeEditor
                             defaultValue={code}
                             language={language}
+                            allowedLanguages={allowedLanguages}
+                            onLanguageChange={handleLanguageChange}
                             onRun={handleRun}
                             isRunning={status === "running"}
                             onChange={setCode}
@@ -140,6 +150,8 @@ export function CodingWorkspace({
                     <CodeEditor
                         defaultValue={code}
                         language={language}
+                        allowedLanguages={allowedLanguages}
+                        onLanguageChange={handleLanguageChange}
                         onRun={handleRun}
                         isRunning={status === "running"}
                         onChange={setCode}
