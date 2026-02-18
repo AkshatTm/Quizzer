@@ -32,7 +32,7 @@ interface StudentTableProps {
     classroomId: string;
 }
 
-export function StudentTable({ students, classroomId }: StudentTableProps) {
+export function StudentTable({ students, classroomId: _classroomId }: StudentTableProps) {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [loadingId, setLoadingId] = useState<string | null>(null);
 

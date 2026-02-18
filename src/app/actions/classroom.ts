@@ -90,7 +90,7 @@ export async function addStudent(classroomId: string, name: string, customAccess
     if (!classroom) throw new Error("Classroom not found");
 
     // Use custom access ID or generate one
-    let accessId = customAccessId?.trim() || generateAccessId();
+    const accessId = customAccessId?.trim() || generateAccessId();
 
     // Validate uniqueness if custom
     if (customAccessId?.trim()) {

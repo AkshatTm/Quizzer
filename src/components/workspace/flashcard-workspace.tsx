@@ -24,7 +24,7 @@ interface FlashcardWorkspaceProps {
 export function FlashcardWorkspace({
     title,
     cards,
-    quizId,
+    quizId: _quizId,
     onGrade,
 }: FlashcardWorkspaceProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
